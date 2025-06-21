@@ -32,7 +32,7 @@ class RigidTransform(torch.nn.Module):
                         self.scale_alpha.unsqueeze(-1).unsqueeze(-1)
                         * self.rotmat_2d(self.rot_beta),
                         torch.stack(
-                            [self.trans_x / (W // 2), self.trans_y / (H // 2)], dim=-1
+                            [self.trans_x / (H // 2), self.trans_y / (W // 2)], dim=-1
                         ).unsqueeze(-1),
                     ],
                     dim=-1,
@@ -49,7 +49,7 @@ class RigidTransform(torch.nn.Module):
         )
         coords = torch.stack(
             torch.meshgrid(
-                torch.linspace(-1, 1, H), torch.linspace(-1, 1, W), indexing="xy"
+                torch.linspace(-1, 1, W), torch.linspace(-1, 1, H), indexing="xy"
             )
         ).unsqueeze(0)
         coordsHomo = torch.cat(

@@ -26,7 +26,7 @@ class LogPolarRepresentation(torch.nn.Module):
 
     def xy_grid(self):
         return torch.meshgrid(
-            *[torch.linspace(1, -1, self.H), torch.linspace(1, -1, self.W)],
+            *[torch.linspace(1, -1, self.W), torch.linspace(1, -1, self.H)],
             indexing="xy",
         )
 
@@ -58,8 +58,8 @@ class LogPolarRepresentation(torch.nn.Module):
         xInds, yInds = self.cart2polgrid()
         grid = torch.stack(
             [
-                (xInds / (img.shape[-2] - 1)) * 2 - 1,
-                (yInds / (img.shape[-1] - 1)) * 2 - 1,
+                (xInds / (img.shape[-1] - 1)) * 2 - 1,
+                (yInds / (img.shape[-2] - 1)) * 2 - 1,
             ],
             dim=-1,
         )

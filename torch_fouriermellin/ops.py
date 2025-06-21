@@ -9,9 +9,9 @@ class PhaseCorrelation(torch.nn.Module):
 
     def forward(self, im, template):
         imFft = torch.fft.rfft2(im)
-        templayteFft = torch.fft.rfft2(template)
+        templateFft = torch.fft.rfft2(template)
         out = torch.fft.irfft2(
-            (imFft * templayteFft.conj()) / (imFft * templayteFft).abs()
+            (imFft * templateFft.conj()) / (imFft * templateFft).abs()
         )
         if not self.shift:
             return out
