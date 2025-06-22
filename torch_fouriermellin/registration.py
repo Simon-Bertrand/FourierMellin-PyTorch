@@ -46,6 +46,14 @@ class MellinFourierRegistration(torch.nn.Module):
         )[..., 0]
         return estRot, estScale
 
+    def get_translation_dirac(self, H, W, tx, ty):
+        assert ty.size(0) == ty.size(
+            0
+        ), "Batch size mismatch in translation parameters."
+        dirac = torch.zeros(ty.size(0), H, W)
+        dirac[torch.arange(ty.size(0)), ty, tx] = 1.0
+        return dirac
+
     def get_translations(self, pc_translat):
         iMax, jMax = torch.unravel_index(
             pc_translat.flatten(-2).sum(-2).argmax(-1), pc_translat.shape[-2:]
@@ -83,6 +91,10 @@ class MellinFourierRegistration(torch.nn.Module):
         }
 
     def register_image(self, image, template):
+        if image.shape[-2] != image.shape[-1]:
+            raise RuntimeError(
+                "Non-square images are not supported in MellinFourierRegistration. This feature is not implemented currently."
+            )
         params = self(image, template)
         estTransTransf = torch.einsum(
             "bcd, bd -> bc",
