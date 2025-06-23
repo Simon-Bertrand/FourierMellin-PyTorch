@@ -2,12 +2,12 @@ import torch
 
 
 class RigidTransform(torch.nn.Module):
-    def __init__(self, scale_alpha, trans_x, trans_y, rot_beta):
+    def __init__(self, scale_alpha, trans_x, trans_y, rot_beta, device=None):
         super().__init__()
-        self.scale_alpha = scale_alpha
-        self.trans_x = trans_x
-        self.trans_y = trans_y
-        self.rot_beta = rot_beta
+        self.scale_alpha = scale_alpha.to(device)
+        self.trans_x = trans_x.to(device)
+        self.trans_y = trans_y.to(device)
+        self.rot_beta = rot_beta.to(device)
 
     @staticmethod
     def rotmat_2d(rot: torch.Tensor) -> torch.Tensor:

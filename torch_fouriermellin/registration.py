@@ -50,8 +50,8 @@ class MellinFourierRegistration(torch.nn.Module):
         assert ty.size(0) == ty.size(
             0
         ), "Batch size mismatch in translation parameters."
-        dirac = torch.zeros(ty.size(0), H, W)
-        dirac[torch.arange(ty.size(0)), ty, tx] = 1.0
+        dirac = torch.zeros(ty.size(0), H, W, dtype=torch.bool, device=ty.device)
+        dirac[torch.arange(ty.size(0)), ty, tx] = True
         return dirac
 
     def get_translations(self, pc_translat):
@@ -61,6 +61,7 @@ class MellinFourierRegistration(torch.nn.Module):
         estTrans = self.transform_translation_parameters(
             iMax, jMax, *pc_translat.shape[-2:]
         )
+
         return estTrans
 
     def forward(self, image, template):
@@ -76,9 +77,10 @@ class MellinFourierRegistration(torch.nn.Module):
         estRot, estScale = self.get_rot_scale(pcRotScale)
         templateUnrotUnscaled = RigidTransform(
             1 / estScale,
-            torch.zeros_like(estScale),
-            torch.zeros_like(estScale),
+            torch.zeros_like(estScale, device=image.device),
+            torch.zeros_like(estScale, device=image.device),
             -estRot,
+            device=image.device,
         )(template)
         pcTranslat = PhaseCorrelation(shift=False)(image, templateUnrotUnscaled)
         estTrans = self.get_translations(pcTranslat)
@@ -106,6 +108,7 @@ class MellinFourierRegistration(torch.nn.Module):
             -estTransTransf[:, 1],
             -estTransTransf[:, 0],
             -params["estRot"],
+            device=image.device,
         )(template)
         return dict(registered=imageTransfInv, params=params)
 

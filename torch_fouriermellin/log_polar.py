@@ -24,34 +24,41 @@ class LogPolarRepresentation(torch.nn.Module):
             align_corners=True,
         )
 
-    def xy_grid(self):
+    def xy_grid(self, device):
         return torch.meshgrid(
-            *[torch.linspace(1, -1, self.W), torch.linspace(1, -1, self.H)],
+            *[
+                torch.linspace(1, -1, self.W, device=device),
+                torch.linspace(1, -1, self.H, device=device),
+            ],
             indexing="xy",
         )
 
-    def pol2cartgrid(self):
+    def pol2cartgrid(self, device):
         radius = self.get_radius()
-        indices = torch.complex(*self.xy_grid())
+        indices = torch.complex(*self.xy_grid(device=device))
         return (radius * indices.abs() / math.sqrt(2)).log() / math.log(
             radius
         ) * 2 - 1, indices.angle() / torch.pi
 
-    def thetarho_grid(self):
+    def thetarho_grid(self, device=None):
         radius = self.get_radius()
         reprH, reprW = self.get_repr_size()
         theta, r = torch.meshgrid(
-            *[torch.arange(2 * reprH), torch.arange(reprW)], indexing="ij"
+            *[
+                torch.arange(2 * reprH, device=device),
+                torch.arange(reprW, device=device),
+            ],
+            indexing="ij",
         )
         return theta, radius ** (r / radius)
 
-    def cart2polgrid(self):
-        theta, rho = self.thetarho_grid()
+    def cart2polgrid(self, device):
+        theta, rho = self.thetarho_grid(device=device)
         indices = torch.polar(rho, theta * torch.pi / 180)
-        return indices.real + (self.W - 1) // 2, indices.imag + (self.H - 1) // 2
+        return indices.real + self.W / 2, indices.imag + self.H / 2
 
     def cart2pol(self, img):
-        xInds, yInds = self.cart2polgrid()
+        xInds, yInds = self.cart2polgrid(img.device)
         grid = torch.stack(
             [
                 (xInds / (img.shape[-1] - 1)) * 2 - 1,
@@ -67,5 +74,5 @@ class LogPolarRepresentation(torch.nn.Module):
             raise NotImplementedError(
                 "Image must be square for polar to cartesian conversion."
             )
-        grid = torch.stack(self.pol2cartgrid(), dim=-1)
+        grid = torch.stack(self.pol2cartgrid(img.device), dim=-1)
         return self.remap(img, grid)
