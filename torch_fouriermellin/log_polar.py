@@ -1,10 +1,13 @@
+import math
+import torch
+
 
 class LogPolarRepresentation(torch.nn.Module):
     def __init__(self, H, W):
         super().__init__()
         self.H = H
         self.W = W
-        if self.W  != self.H:
+        if self.W != self.H:
             raise NotImplementedError(
                 "Image must be square for polar to cartesian conversion."
             )
@@ -70,6 +73,6 @@ class LogPolarRepresentation(torch.nn.Module):
         return self.remap(img, grid)
 
     def pol2cart(self, img):
-    
+
         grid = torch.stack(self.pol2cartgrid(img.device), dim=-1)
         return self.remap(img, grid)
