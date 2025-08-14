@@ -3,9 +3,10 @@ import torch
 
 
 class PhaseCorrelation(torch.nn.Module):
-    def __init__(self, shift=True):
+    def __init__(self, shift=True, eps=1e-6):
         super(PhaseCorrelation, self).__init__()
         self.shift = shift
+        self.eps = eps
 
     def forward(self, im, template):
 
@@ -16,7 +17,7 @@ class PhaseCorrelation(torch.nn.Module):
         if torch.isnan(templateFft).any():
             raise ValueError("NaN detected in templateFft")
         out = torch.fft.irfft2(
-            (imFft * templateFft.conj()) / (imFft * templateFft + 1e-6).abs(),
+            (imFft * templateFft.conj()) / (imFft * templateFft + self.eps).abs(),
             s=im.shape[-2:],
         )
         if torch.isnan(out).any():
