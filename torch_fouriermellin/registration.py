@@ -17,7 +17,7 @@ class MellinFourierRegistration(torch.nn.Module):
         self.highPassFilter = HighPassFilter()
 
     def transform_rot_parameter(self, rotIdx):
-        return -rotIdx + 90
+        return -rotIdx / self.logPolar.angular_space_length * 360 + 90
 
     def transform_scale_parameter(self, scaleIdx, width):
         radius = self.logPolar.get_radius()
@@ -72,7 +72,8 @@ class MellinFourierRegistration(torch.nn.Module):
         imageLogPolar = self.logPolar.cart2pol(imageFftAbs)
         templateLogPolar = self.logPolar.cart2pol(templateFftAbs)
         pcRotScale = PhaseCorrelation(shift=True)(
-            imageLogPolar[..., :180, :], templateLogPolar[..., :180, :]
+            imageLogPolar[..., : self.logPolar.angular_space_length // 2, :],
+            templateLogPolar[..., : self.logPolar.angular_space_length // 2, :],
         ).sum(-3)
         estRot, estScale = self.get_rot_scale(pcRotScale)
         templateUnrotUnscaled = RigidTransform(
@@ -82,6 +83,10 @@ class MellinFourierRegistration(torch.nn.Module):
             -estRot,
             device=image.device,
         )(template)
+        if torch.isnan(templateUnrotUnscaled).any():
+            raise ValueError("NaN detected in templateUnrotUnscaled")
+        if torch.isnan(image).any():
+            raise ValueError("NaN detected in image")
         pcTranslat = PhaseCorrelation(shift=False)(image, templateUnrotUnscaled)
         estTrans = self.get_translations(pcTranslat)
         return {
@@ -113,7 +118,10 @@ class MellinFourierRegistration(torch.nn.Module):
         return dict(registered=imageTransfInv, params=params)
 
     def get_parameters_domain(self):
-        pcRotScaleSize = (180, self.logPolar.get_radius())
+        pcRotScaleSize = (
+            self.logPolar.angular_space_length // 2,
+            self.logPolar.get_radius(),
+        )
         randomRotScale = torch.unravel_index(
             torch.arange(pcRotScaleSize[0] * pcRotScaleSize[1]), pcRotScaleSize
         )

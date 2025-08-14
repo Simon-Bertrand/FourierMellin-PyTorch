@@ -11,9 +11,16 @@ class PhaseCorrelation(torch.nn.Module):
 
         imFft = torch.fft.rfft2(im, s=im.shape[-2:])
         templateFft = torch.fft.rfft2(template, s=im.shape[-2:])
+        if torch.isnan(imFft).any():
+            raise ValueError("NaN detected in imFft")
+        if torch.isnan(templateFft).any():
+            raise ValueError("NaN detected in templateFft")
         out = torch.fft.irfft2(
-            (imFft * templateFft.conj()) / (imFft * templateFft).abs(), s=im.shape[-2:]
+            (imFft * templateFft.conj()) / (imFft * templateFft + 1e-6).abs(),
+            s=im.shape[-2:],
         )
+        if torch.isnan(out).any():
+            raise ValueError("NaN detected in out")
         if not self.shift:
             return out
         return torch.fft.ifftshift(out)

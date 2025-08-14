@@ -1,19 +1,22 @@
-import math
 import torch
+import math
 
 
 class LogPolarRepresentation(torch.nn.Module):
-    def __init__(self, H, W):
+    def __init__(self, H, W, angular_space_length=None):
         super().__init__()
         self.H = H
         self.W = W
+        self.angular_space_length = (
+            self.get_radius() if angular_space_length is None else angular_space_length
+        )
         if self.W != self.H:
             raise NotImplementedError(
                 "Image must be square for polar to cartesian conversion."
             )
 
     def get_repr_size(self) -> tuple[int, int]:
-        return 180, self.get_radius()
+        return self.angular_space_length, self.get_radius()
 
     def get_radius(self) -> int:
         return int(
@@ -49,8 +52,14 @@ class LogPolarRepresentation(torch.nn.Module):
         reprH, reprW = self.get_repr_size()
         theta, r = torch.meshgrid(
             *[
-                torch.arange(2 * reprH, device=device),
-                torch.arange(reprW, device=device),
+                torch.linspace(
+                    0,
+                    360,
+                    reprH,
+                    device=device,
+                    dtype=torch.float32,
+                ),
+                torch.arange(reprW, device=device, dtype=torch.float32),
             ],
             indexing="ij",
         )
