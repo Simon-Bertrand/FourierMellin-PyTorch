@@ -1,4 +1,7 @@
+import math
 import torch
+
+from so_rigidreg.models import mf
 
 from .log_polar import (
     LogPolarRepresentation,
@@ -53,6 +56,41 @@ class MellinFourierRegistration(torch.nn.Module):
         dirac = torch.zeros(ty.size(0), H, W, dtype=torch.bool, device=ty.device)
         dirac[torch.arange(ty.size(0)), ty, tx] = True
         return dirac
+
+    def get_translation_disk(self, H, W, tx, ty, r):
+        assert ty.size(0) == ty.size(
+            0
+        ), "Batch size mismatch in translation parameters."
+        X, Y = torch.meshgrid(
+            torch.arange(H, device=ty.device),  # rows (y)
+            torch.arange(W, device=ty.device),  # cols (x)
+            indexing="ij",
+        )
+
+        # Assume ijGTruth[:,0] = y (row), ijGTruth[:,1] = x (col)
+        y0 = (ty % H).view(-1, 1, 1)
+        x0 = (tx % W).view(-1, 1, 1)
+
+        mask = ((X[None] - y0) ** 2 + (Y[None] - x0) ** 2) < r**2
+        return mask
+
+    def get_rotscale_disk(self, rotscaleHeight, rotscaleWidth, gtAngle, gtScale, r=3):
+        # rotscalewidth = ans["params"]["pcRotScale"].size(-1)
+        rotY = -((gtAngle - 90) / 360 * self.logPolar.angular_space_length)
+        radius = self.logPolar.get_radius()
+        scaleX = (rotscaleWidth // 2) - (radius * torch.log(gtScale) / math.log(radius))
+
+        X, Y = torch.meshgrid(
+            torch.arange(rotscaleHeight, device=gtAngle.device),
+            torch.arange(rotscaleWidth, device=gtAngle.device),
+            indexing="ij",
+        )
+
+        y0 = (rotY).view(-1, 1, 1)
+        x0 = (scaleX).view(-1, 1, 1)
+
+        mask = ((X[None] - y0) ** 2 + (Y[None] - x0) ** 2) < r**2
+        return mask
 
     def get_translations(self, pc_translat):
         iMax, jMax = torch.unravel_index(
